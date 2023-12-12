@@ -1,0 +1,117 @@
+import tkinter as tk
+from tkinter import simpledialog
+from datetime import datetime
+
+class ParqueaderoApp:
+
+    def __init__(self, root, filas, columnas):
+        self.root = root
+        self.root.title("Parqueadero")
+
+        self.filas = filas
+        self.columnas = columnas
+
+        self.reservas = {}
+
+        self.parqueadero = [['L' for _ in range(columnas)] for _ in range(filas)]
+
+        self.inicializar_interfaz()
+
+    def inicializar_interfaz(self):
+        self.etiqueta = tk.Label(self.root, text="Estado del Parqueadero:")
+        self.etiqueta.pack()
+
+        self.matriz_frame = tk.Frame(self.root)
+        self.matriz_frame.pack()
+
+        self.botones_frame = tk.Frame(self.root)
+        self.botones_frame.pack()
+
+        self.botones = []
+        for fila in range(self.filas):
+            fila_botones = []
+            for columna in range(self.columnas):
+                boton = tk.Button(self.matriz_frame, text=self.parqueadero[fila][columna], width=2, height=1,
+                                  command=lambda f=fila, c=columna: self.toggle_estado(f, c))
+                boton.grid(row=fila, column=columna)
+                fila_botones.append(boton)
+            self.botones.append(fila_botones)
+
+        self.actualizar_matriz()
+
+        self.boton_salir = tk.Button(self.botones_frame, text="Salir", command=self.root.destroy)
+        self.boton_salir.pack(side=tk.LEFT)
+
+    def toggle_estado(self, fila, columna):
+        if self.parqueadero[fila][columna] == 'L':
+            self.parqueadero[fila][columna] = 'R'
+            self.botones[fila][columna].config(text='R')
+            self.root.after(500, lambda f=fila, c=columna: self.solicitar_info_reserva(f, c))
+        elif self.parqueadero[fila][columna] == 'R':
+            self.solicitar_info_reserva(fila, columna)
+        elif self.parqueadero[fila][columna] == 'O':
+            respuesta = simpledialog.askstring("Ocupado", "¿Desea liberar el espacio (L) o consultar la información (C)?")
+            if respuesta and respuesta.upper() == 'L':
+                self.liberar_lugar(fila, columna)
+            elif respuesta and respuesta.upper() == 'C':
+                self.consultar_informacion(fila, columna)
+
+    def solicitar_info_reserva(self, fila, columna):
+        nombre = simpledialog.askstring("Reservar", "Ingrese el nombre del propietario:")
+        marca = simpledialog.askstring("Reservar", "Ingrese la marca del vehículo:")
+        placa = simpledialog.askstring("Reservar", "Ingrese la placa del vehículo:")
+        hora_entrada = self.obtener_hora_entrada()
+
+        if nombre and marca and placa:
+            self.parqueadero[fila][columna] = 'O'
+            self.reservas[(fila, columna)] = {'nombre': nombre, 'marca': marca, 'placa': placa, 'hora_entrada': hora_entrada}
+            self.actualizar_matriz()
+            print(f"Reserva realizada con éxito: Fila {fila + 1}, Columna {columna + 1}")
+            print(f"Propietario: {nombre}, Marca: {marca}, Placa: {placa}, Hora de entrada: {hora_entrada}")
+        else:
+            self.parqueadero[fila][columna] = 'L'
+            self.botones[fila][columna].config(text='L')
+
+    def liberar_lugar(self, fila, columna):
+        if (fila, columna) in self.reservas:
+            hora_entrada = self.reservas[(fila, columna)]['hora_entrada']
+            hora_salida = self.obtener_hora_salida()
+            self.parqueadero[fila][columna] = 'L'
+            self.botones[fila][columna].config(text='L')
+            print(f"Lugar en la Fila {fila + 1}, Columna {columna + 1} liberado.")
+            print(f"Hora de entrada: {hora_entrada}, Hora de salida: {hora_salida}")
+            del self.reservas[(fila, columna)]
+        else:
+            print(f"No hay reserva en la Fila {fila + 1}, Columna {columna + 1}.")
+
+    def consultar_informacion(self, fila, columna):
+        if (fila, columna) in self.reservas:
+            info = self.reservas[(fila, columna)]
+            print(f"Información del ocupante en la Fila {fila + 1}, Columna {columna + 1}:")
+            print(f"Propietario: {info['nombre']}, Marca: {info['marca']}, Placa: {info['placa']}, Hora de entrada: {info['hora_entrada']}")
+        else:
+            print(f"No hay reserva en la Fila {fila + 1}, Columna {columna + 1}.")
+
+    def obtener_hora_entrada(self):
+        now = datetime.now()
+        return now.strftime("%H:%M:%S")
+
+    def obtener_hora_salida(self):
+        now = datetime.now()
+        return now.strftime("%H:%M:%S")
+
+    def actualizar_matriz(self):
+        for fila in range(self.filas):
+            for columna in range(self.columnas):
+                self.botones[fila][columna].config(text=self.parqueadero[fila][columna])
+
+def main():
+    filas = 5
+    columnas = 10
+
+    root = tk.Tk()
+    app = ParqueaderoApp(root, filas, columnas)
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
